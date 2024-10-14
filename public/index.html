@@ -1,0 +1,126 @@
+<html>
+<head>
+<!--<meta http-equiv="X-UA-Compatible" content="chrome=1">-->
+  <!--these two are required by the ChemDoodle Web Components library-->
+<link rel="stylesheet" href="v10/install/ChemDoodleWeb.css" type="text/css">
+<script type="text/javascript" src="v10/install/ChemDoodleWeb.js"></script>
+<!--these two are required by the SketcherCanvas plugin-->
+<link rel="stylesheet" href="v10/install/uis/jquery-ui-1.11.4.css" type="text/css">
+<script type="text/javascript" src="v10/install/uis/ChemDoodleWeb-uis.js"></script>
+<script src="openbabel/openbabel.js"></script>
+
+<title>Predictor Tool</title> 
+</head>
+<body>
+<h1>Predictor Tool</h1>
+<p>Investigating the process of alcohol turning into other substances. Use the Predictor Tool to learn about the inner workings!!</p>
+<div id="prompt"></div>
+<table>
+    <tr>
+        <td>
+            <canvas id="sketcher" width="600" height="400"></canvas> 
+        </td>
+        <td>
+            <button type="button" onclick="predictREACTION();">Explain Reaction Mechanism</button>
+        </td>
+    </tr>
+</table>
+<script> 
+    //
+    document.getElementById('prompt').value ="";
+    // Create a new SketcherCanvas 
+    ChemDoodle.ELEMENT['H'].jmolColor = 'black';
+    ChemDoodle.ELEMENT['S'].jmolColor = '#B9A130';
+    let sketcher = new ChemDoodle.SketcherCanvas('sketcher', 600, 400, {useServices:true, oneMolecule:false});
+    sketcher.styles.atoms_displayTerminalCarbonLabels_2D = true;
+    sketcher.styles.atoms_useJMOLColors = true;
+    sketcher.styles.bonds_clearOverlaps_2D = true;
+    sketcher.styles.shapes_color = '#c10000';
+    sketcher.repaint();
+</script>
+<script>
+
+function predictREACTION() {
+
+    let mol = sketcher.molecules;
+    var molArr = [];
+    var output = [];
+    for (let j = 0; j < mol.length; j++) {
+        molFile = ChemDoodle.writeMOL(mol[j]);
+        molFile = "\n" + "OpenBabel10012419342D" + "\n" + molFile.substring(molFile.indexOf(".com") + 4);
+        molArr.push(molFile);
+        //console.log(molFile);
+    }
+
+    var OpenBabel = OpenBabelModule();
+    OpenBabel.onRuntimeInitialized = function() {
+        for (let i = 0; i < molArr.length; i++) {
+            var molData = molArr[i];  // MOL format molecule data
+            var conv = new OpenBabel.ObConversionWrapper();
+            conv.setInFormat('', 'mol');
+            var molecule = new OpenBabel.OBMol();
+            conv.readString(molecule, molData);
+            var gen2d = OpenBabel.OBOp.FindType("Gen2D");
+            if (!gen2d.Do(molecule, '')) {
+                console.error('Generate 2D failed');
+            }
+            else {
+                conv.setOutFormat('', 'smiles');
+                var outputData = conv.writeString(molecule, false);
+                outputData = outputData.trim();
+                output.push(outputData);
+            }
+            conv.delete();
+        }
+        let reactants = output[0];
+        for (let k = 1; k < output.length; k++) {
+            reactants += " + ";
+            reactants += output[k];
+        }
+        console.log(reactants); 
+        localStorage.setItem("storageName", reactants);  
+        const param1 = reactants;
+        //start AI
+        document.getElementById('prompt').value = reactants;
+
+        generateText();
+        //async function to handle longer AI response time
+    }
+
+    async function generateText() {
+        const prompt = document.getElementById('prompt').value;
+
+        console.log("prompt" + prompt);
+       
+        const response = await fetch('/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt })
+        });
+
+        const data = await response.json();
+        //const data = response.json();
+        console.log("airesponse" + data.response);
+        code = data.response;
+        // Remove any leading or trailing whitespace 
+        code = code.trim(); 
+        // Remove any "```javascript" or "```" blocks 
+        code = code.replace(/```javascript\n?/g, ""); 
+        code = code.replace(/```\n?/g, ""); 
+        // Remove any leading or trailing newlines 
+        code = code.replace(/^\n+|\n+$/g, "");
+        console.log("cleancode" + code);
+
+        localStorage.setItem("aiResponse", code); 
+
+        const targetUrl = '/ReactionMechanism';
+        window.location.href = targetUrl;
+        }
+        // end AI call
+}
+</script>
+
+</body>
+</html>

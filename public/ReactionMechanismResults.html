@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="v10/install/ChemDoodleWeb.css" type="text/css">
+  <script type="text/javascript" src="v10/install/ChemDoodleWeb.js"></script>
+  <script src="openbabel/openbabel.js"></script>
+</head>
+<body>
+  <table></table>
+    <tr>
+        <td>
+            <canvas id="id" width="500" height="500"></canvas> 
+        </td>
+        <td>
+          <p>I want to test another Reaction!!!</p>
+        </td>
+        <td>
+            <button type="button" onclick=gotoMainPage();>Back to Sketcher</button>
+        </td>
+    </tr>
+</table>
+<script>
+  var OpenBabel = OpenBabelModule();
+  OpenBabel.onRuntimeInitialized = function() {
+
+    var myCanvas = new ChemDoodle.ViewerCanvas('id', 500, 500);
+
+    //the width of the bonds should be .6 pixels
+    myCanvas.styles.bonds_width_2D = 1;
+    //the spacing between higher order bond lines should be 18% of the length of the bond
+    myCanvas.styles.bonds_saturationWidthAbs_2D = 2.6;
+    myCanvas.styles.atoms_lonePairDistance_2D = 9;
+    myCanvas.styles.bonds_hashSpacing_2D = 2.5;
+    myCanvas.styles.atoms_font_bold_2D = true;
+    myCanvas.styles.atoms_font_size_2D = 12;
+    myCanvas.styles.bonds_atomLabelBuffer_2D = 3;
+    myCanvas.styles.atoms_useJMOLColors = true;
+
+  
+    var molArr = [];
+    var shapesArr = [];
+
+    function addMolecule(smiles, lineNumber) {
+      originalIndexH = smiles.indexOf("(H)");
+      let smilesWithoutLowercasePart1 = smiles.substring(0, originalIndexH).replace(/[a-z(){}\[\]@]/g, '');
+      let smilesWithoutLowercasePart2 = smiles.substring(originalIndexH).replace(/[a-z{}\[\]@]/g, '');
+      let smilesWithoutLowercase = smilesWithoutLowercasePart1 + smilesWithoutLowercasePart2;
+      //console.log(smilesWithoutLowercase);
+      indexH = smilesWithoutLowercase.indexOf("(H)");
+      //console.log(indexH);
+      if (smiles.indexOf("(H)") != -1) {
+        smiles = smiles.substring(0, smiles.indexOf("(H)")) + "(C)" + smiles.substring(smiles.indexOf("H") + 3);
+      }
+      var molData = smiles;  // MOL format molecule data
+      var conv = new OpenBabel.ObConversionWrapper();
+      conv.setInFormat('', 'smiles');
+      var mol = new OpenBabel.OBMol();
+      conv.readString(mol, molData);
+      var gen2d = OpenBabel.OBOp.FindType("Gen2D");
+      if (!gen2d.Do(mol, '')) {
+        console.error('Generate 2D failed');
+      } else {
+        conv.setOutFormat('', 'mol');
+        var outputData = conv.writeString(mol, false);
+        let result_o = outputData.substring(25);
+        if (indexH != -1 ) {
+          let splitElements = result_o.split('\n');
+          //console.log(splitElements);
+          let targetElement = splitElements[indexH + 1];
+          //console.log(targetElement);
+          //targetelement = "H" + targetElement.substring(1);
+          //splitElements[indexH] = targetElement;
+          //result_o = splitElements.join('\n');\
+          tempIndex = targetElement.indexOf("C");
+          splitElements[indexH + 1] = targetElement.substring(0, tempIndex) + "H" + targetElement.substring(tempIndex + 1);
+          //console.log(splitElements[indexH + 1]);
+          result_o = splitElements.join('\n');
+          //console.log("HEHEHEEHEH");
+        }
+
+        result = "Molecule Name\n  CHEMDOOD08070920033D 0   0.00000     0.00000     0\n[Insert Comment Here]\n" + result_o + "> <DATE>\n07-08-2009";
+        //console.log(result);
+        var molecule = ChemDoodle.readMOL(result);
+        molArr.push(molecule);
+        setLine(molecule, lineNumber);
+      }
+      conv.delete();
+    }
+
+    function addElectronPusher(mol1, mol2, input1, input2) {
+      var bondNumber;
+      var part1;
+      var coord1;
+      if (input1.indexOf("bond") != -1) {
+        bondIndex = parseInt(input1.substring(4)) - 1;
+        part1 = mol1.bonds[bondIndex];
+        coord1 = mol1.bonds[bondIndex].a1.y;
+      }
+      else {
+        //console.log("checkpoint 1");
+        atomIndex = parseInt(input1.substring(4)) - 1;
+        //console.log(atomIndex+input1);
+        part1 = mol1.atoms[atomIndex];
+        coord1 = mol1.atoms[atomIndex].y;
+      }
+      var part2;
+      var coord2;
+      if (input2.indexOf("bond") != -1) {
+        bondIndex2 =  parseInt(input2.substring(4)) - 1;
+        part2 = mol2.bonds[bondIndex2];
+        coord2 = mol2.bonds[bondIndex2].a1.y;
+      }
+      else {
+        //console.log("checkpoint 2");
+        atomIndex2 = parseInt(input2.substring(4)) - 1;
+        //console.log(atomIndex2);
+        part2 = mol2.atoms[atomIndex2];
+        coord2 = mol2.atoms[atomIndex2].y;
+      }
+      //console.log(coord2);
+      //console.log(coord1);
+
+      if (coord2 == coord1 && [0, 100, 200, 300, 400].includes(coord2)) {
+        //console.log("here");
+        translateY(mol1, -20);
+      }
+
+      var pusher = new ChemDoodle.structures.d2.Pusher(part1, part2, 2);
+      shapesArr.push(pusher);
+    }
+
+    function translateX(mol, amt) {
+      for (let i = 0; i < mol.atoms.length; i++) {
+        mol.atoms[i].x += amt;
+      }
+    }
+
+    function moleculeXLength(mol) {
+      return getXMax(mol) - getXMin(mol);
+    }
+
+    function translateY(mol, amt) {
+      for (let i = 0; i < mol.atoms.length; i++) {
+        mol.atoms[i].y += amt;
+      }
+    }
+
+    function setLine(mol, lineNumber) {
+      translateY(mol, (lineNumber-1)*100);
+    }
+    /*
+          function addLonePairs() {
+    
+          }
+    */
+
+
+    function displayReaction(reaction, lineNumber) {
+      var tempReactants = reaction.substring(0, reaction.indexOf("->") - 1);
+      var tempProducts = reaction.substring(reaction.indexOf("->") + 3);
+      reactants = tempReactants.split(" + ");
+      products = tempProducts.split(" + ");
+      var originalLength = molArr.length;
+      var xTrans = 0;
+      var i = 0;
+      while (i < reactants.length) {
+        addMolecule(reactants[i], lineNumber);
+        translateX(molArr[originalLength + i], -1 * getXMin(molArr[originalLength + i]));
+        translateX(molArr[originalLength + i], xTrans);
+        centerMolecule(molArr[originalLength + i], molArr[originalLength]);
+        if (i == reactants.length - 1) {
+          addArrowAfter(molArr[originalLength + i]);
+        }
+        else {
+          addPlusAfter(molArr[originalLength + i]);
+        }
+        i++;
+        xTrans += (100 + moleculeXLength(molArr[originalLength + i - 1]));
+      }
+      xTrans += 60;
+      var j = 0;
+      while (j < products.length) {
+        addMolecule(products[j], lineNumber);
+        translateX(molArr[originalLength + reactants.length + j], -1 * getXMin(molArr[originalLength + reactants.length + j]));
+        translateX(molArr[originalLength + reactants.length + j], xTrans);
+        centerMolecule(molArr[originalLength + reactants.length + j], molArr[originalLength]);
+        if (j == products.length - 1) {
+          //Do nothing
+        }
+        else {
+          addPlusAfter(molArr[originalLength + reactants.length + j]);
+        }
+        j++;
+        xTrans += (100 + moleculeXLength(molArr[originalLength + reactants.length + j - 1]));
+      }
+    }
+
+
+
+    function getXMax(mol) {
+      var val = mol.atoms[0].x;
+        for (let i = 1; i < mol.atoms.length; i++) {
+            if (mol.atoms[i].x > val) {
+              val = mol.atoms[i].x;
+            }
+        }
+      return val;
+    }
+             
+    function getXMin(mol) {
+      var val = mol.atoms[0].x;
+        for (let i = 1; i < mol.atoms.length; i++) {
+            if (mol.atoms[i].x < val) {
+              val = mol.atoms[i].x;
+            }
+          }
+        return val;
+    }
+
+    function getYMax(mol) {
+      var val = mol.atoms[0].y;
+        for (let i = 1; i < mol.atoms.length; i++) {
+            if (mol.atoms[i].y > val) {
+              val = mol.atoms[i].y;
+            }
+        }
+      return val;
+    }
+             
+    function getYMin(mol) {
+      var val = mol.atoms[0].y;
+        for (let i = 1; i < mol.atoms.length; i++) {
+            if (mol.atoms[i].y < val) {
+              val = mol.atoms[i].y;
+            }
+        }
+      return val;
+    }
+
+    function getYMid(mol) {
+      return (getYMax(mol) + getYMin(mol))/2;
+    }
+
+    function getXMid(mol) {
+      return (getXMax(mol) + getXMin(mol))/2;
+    }
+
+    function addPlusAfter(mol) {
+      shapesArr.push(plusX(mol));
+      shapesArr.push(plusY(mol));
+    }
+
+    function centerMolecule(mol, target) {
+      let midDiff = getYMid(mol) - getYMid(target);
+      translateY(mol, midDiff * -1);
+    }
+
+    function addArrowAfter(mol) {
+      let arrow = new ChemDoodle.structures.d2.Line(new ChemDoodle.structures.Point(getXMax(mol) + 50, 
+      getYMid(mol)), new ChemDoodle.structures.Point(getXMax(mol) + 110, getYMid(mol)));
+      arrow.arrowType = ChemDoodle.structures.d2.Line.ARROW_SYNTHETIC;
+      shapesArr.push(arrow);
+    }
+
+    function plusX(mol) {
+      let plusX = new ChemDoodle.structures.d2.Line(new ChemDoodle.structures.Point(getXMax(mol) + 50, 
+      getYMid(mol)), new ChemDoodle.structures.Point(getXMax(mol) + 57, getYMid(mol)));
+
+      return plusX;
+    }
+
+    function plusY(mol) {
+      let plusY = new ChemDoodle.structures.d2.Line(new ChemDoodle.structures.Point(getXMax(mol) + 53.5, 
+      getYMid(mol)-3.5), new ChemDoodle.structures.Point(getXMax(mol) + 53.5, getYMid(mol)+3.5));
+
+      return plusY;
+    }  
+
+    function includeBracket(mol, charge) {
+      let  = new ChemDoodle.structures.d2.Bracket(new ChemDoodle.structures.Point(getXMin(mol) - 17, getYMin(mol) - 17), new ChemDoodle.structures.Point(getXMax(mol) + 17, getYMax(mol) + 17));
+      shapesArr.push(bracket);
+      bracket.charge = charge;
+    }
+
+    function addSideParticipant(mol, smiles) {
+      addMolecule(smiles, 1);
+      translateY(molArr[molArr.length - 1], getYMax(mol) - 20);
+      translateX(molArr[molArr.length - 1], getXMax(mol) + 20);
+    }
+
+    const commonOrganicAtoms = ["H", 1, "C", 4, "N", 5, "O", 6, "F", 7, "P", 5, "S", 6, "Cl", 7, "Br", 7];
+
+    function getNumBonds(mol, index) {
+      var numBonds = 0;
+      for (i = 0; i < mol.bonds.length; i++) {
+        bond = mol.bonds[i];
+        if (mol.bonds[i].a1 == mol.atoms[index] || mol.bonds[i].a2 == mol.atoms[index]) {
+          numBonds++;
+        }
+      }
+      return numBonds;
+    }
+
+    function addLonePairs() {
+      for (let i = 0; i < molArr.length; i++) {
+        var myMolecule = molArr[i];
+        for (let j = 0; j < myMolecule.atoms.length; j++) {
+          var myAtom = myMolecule.atoms[j];
+          var element = myAtom.label;
+          if (!(myAtom.label == "H" || (myAtom.label == "C" && myAtom.charge >= 1))) {
+            var valenceNum = commonOrganicAtoms[commonOrganicAtoms.indexOf(element)+1];
+            var hCount = myAtom.getImplicitHydrogenCount();
+          //console.log(element + ":" + valenceNum + ":" + hCount);
+          //console.log(getNumBonds(myMolecule, j));
+          //console.log(valenceNum - (getNumBonds(myMolecule, j)))/2;
+          //console.log(myAtom.getImplicitHydrogenCount());
+            myAtom.numLonePair = (valenceNum - myAtom.getImplicitHydrogenCount())/2;
+          }
+        }
+      }
+    }
+
+    function fixChirality() {
+      for (let i = 0; i < molArr.length; i++) {
+        var myMolecule = molArr[i];
+        for (let j = 0; j < myMolecule.bonds.length; j++) {
+          var myBond = myMolecule.bonds[j];
+          if (myBond.stereo == "recessed" && j != 0 && myMolecule.bonds[j-1].stereo != "protruding") {
+            myMolecule.bonds[j+1].stereo = "protruding";
+          }
+          if (myBond.stereo == "protruding" && j != 0 && myMolecule.bonds[j-1].stereo != "recessed") {
+            myMolecule.bonds[j+1].stereo = "recessed";
+          }
+          if (j == 0) {
+            if (myBond.stereo == "protruding") {
+              myMolecule.bonds[j+1].stereo = "recessed";
+            }
+            else if (myBond.stereo == "recessed") {
+              myMolecule.bonds[j+1].stereo = "protruding";
+            }
+          }
+        }
+      }
+    }
+
+    function fixBonds() {
+      for (let i = 0; i < molArr.length; i++) {
+        var myMolecule = molArr[i];
+        for (let j = 0; j < myMolecule.bonds.length; j++) {
+          var myBond = myMolecule.bonds[j];
+          if (myBond.bondOrder > 1) {
+            //console.log("here");
+            myBond.stereo = "none";
+          }
+        }
+      }
+    }
+
+
+  //testing
+// Display the initial hydrohalogenation reaction (first step)
+
+let testString = localStorage.getItem("storageName") + " -> CO + [Br-]";
+console.log("hello param");
+console.log(testString);
+let aiResponseString = localStorage.getItem("aiResponse");
+//let sessionaiResponseString = sessionStorage.getItem("sessionaiResponse") 
+//const urlParams = new URLSearchParams(window.location.search);
+//const name = urlParams.get('name');
+//aiResponseString = aiResponseString.substring(13);
+//aiResponseString = aiResponseString.substring(0, aiResponseString.indexOf("```"));
+console.log("airesponse: "+ aiResponseString);
+//console.log("sessionairesponse: "+ name);
+
+executeReactionScript(aiResponseString);
+//displayReaction(testString, 1);
+//generateText(testString);
+
+
+function executeReactionScript(script) {
+  // Split the script by line breaks
+  const lines = script.split('\n');
+  // Loop through each line of the script
+  lines.slice(1).forEach(line => {
+      // Trim the line to remove extra spaces or line breaks
+      const trimmedLine = line.trim();
+
+      // Execute each line of the script
+      if (trimmedLine.length > 0) {
+          eval(trimmedLine);
+      }
+  });
+}
+
+
+//
+//displayReaction("CON + Br(H) -> CC(H)-[C+](O)Cl + [Br-]", 1);
+//displayReaction("CC(H)-[C+](CCC)C + [Br-] -> CC(H)-[C@](CCC)(C)(Br) + CC(H)-[C@@](CCC)(C)(Br)", 2);
+
+// Add electron pushers for the formation of the carbocation intermediate
+// The double bond in ethene will break and attack the hydrogen in HBr
+//addElectronPusher(molArr[0], molArr[1], "bond5", "atom1"); // Ethene double bond to H in HBr
+
+// The bond between H and Br will break, moving the electrons to Br
+//addElectronPusher(molArr[1], molArr[1], "bond1", "atom2"); // H-Br bond to Br
+
+// Display the final step of the reaction (second step)
+//displayReaction("[CH2-CH2+] + [Br-] -> C(CBr)C", 2);
+
+// Add electron pusher for the final step
+// The carbocation will attract the Br- to form the final product
+  //addElectronPusher(molArr[5], molArr[4], "atom1", "atom5"); // The carbocation (second carbon) attracts the Br-
+  fixChirality();
+  addLonePairs();
+  //molArr[6].bonds[1].stereo == "recessed";
+  //console.log(molArr[2]);
+  fixBonds();
+  myCanvas.loadContent(molArr, shapesArr);
+  
+  }
+</script>
+<script>
+  function gotoMainPage() {
+    //localStorage.clear();
+    const targetUrl = '/PredictorTool';
+    window.location.href = targetUrl;
+  }
+</script>
+</body>
+</html>
