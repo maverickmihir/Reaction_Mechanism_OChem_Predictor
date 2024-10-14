@@ -16,7 +16,7 @@
             <canvas id="id" width="500" height="500"></canvas> 
         </td>
         <td>
-          <p>I want to test another Reaction!!!</p>
+          <p>I want to input other Reactants!!!</p>
         </td>
         <td>
             <button type="button" onclick=gotoMainPage();>Back to Sketcher</button>
@@ -69,21 +69,18 @@
         let result_o = outputData.substring(25);
         if (indexH != -1 ) {
           let splitElements = result_o.split('\n');
-          //console.log(splitElements);
+
           let targetElement = splitElements[indexH + 1];
-          //console.log(targetElement);
-          //targetelement = "H" + targetElement.substring(1);
-          //splitElements[indexH] = targetElement;
-          //result_o = splitElements.join('\n');\
+
           tempIndex = targetElement.indexOf("C");
           splitElements[indexH + 1] = targetElement.substring(0, tempIndex) + "H" + targetElement.substring(tempIndex + 1);
-          //console.log(splitElements[indexH + 1]);
+
           result_o = splitElements.join('\n');
-          //console.log("HEHEHEEHEH");
+
         }
 
-        result = "Molecule Name\n  CHEMDOOD08070920033D 0   0.00000     0.00000     0\n[Insert Comment Here]\n" + result_o + "> <DATE>\n07-08-2009";
-        //console.log(result);
+        result = "Molecule Name\n  CHEMDOOD08070920033D 0   0.00000     0.00000     0\n[Insert Comment Here]\n" + result_o + "> <DATE>\n07-08-2024";
+
         var molecule = ChemDoodle.readMOL(result);
         molArr.push(molecule);
         setLine(molecule, lineNumber);
@@ -103,7 +100,6 @@
       else {
         //console.log("checkpoint 1");
         atomIndex = parseInt(input1.substring(4)) - 1;
-        //console.log(atomIndex+input1);
         part1 = mol1.atoms[atomIndex];
         coord1 = mol1.atoms[atomIndex].y;
       }
@@ -117,15 +113,11 @@
       else {
         //console.log("checkpoint 2");
         atomIndex2 = parseInt(input2.substring(4)) - 1;
-        //console.log(atomIndex2);
         part2 = mol2.atoms[atomIndex2];
         coord2 = mol2.atoms[atomIndex2].y;
       }
-      //console.log(coord2);
-      //console.log(coord1);
 
       if (coord2 == coord1 && [0, 100, 200, 300, 400].includes(coord2)) {
-        //console.log("here");
         translateY(mol1, -20);
       }
 
@@ -314,10 +306,6 @@
           if (!(myAtom.label == "H" || (myAtom.label == "C" && myAtom.charge >= 1))) {
             var valenceNum = commonOrganicAtoms[commonOrganicAtoms.indexOf(element)+1];
             var hCount = myAtom.getImplicitHydrogenCount();
-          //console.log(element + ":" + valenceNum + ":" + hCount);
-          //console.log(getNumBonds(myMolecule, j));
-          //console.log(valenceNum - (getNumBonds(myMolecule, j)))/2;
-          //console.log(myAtom.getImplicitHydrogenCount());
             myAtom.numLonePair = (valenceNum - myAtom.getImplicitHydrogenCount())/2;
           }
         }
@@ -353,7 +341,6 @@
         for (let j = 0; j < myMolecule.bonds.length; j++) {
           var myBond = myMolecule.bonds[j];
           if (myBond.bondOrder > 1) {
-            //console.log("here");
             myBond.stereo = "none";
           }
         }
@@ -364,21 +351,14 @@
   //testing
 // Display the initial hydrohalogenation reaction (first step)
 
-let testString = localStorage.getItem("storageName") + " -> CO + [Br-]";
-console.log("hello param");
-console.log(testString);
+//let testString = localStorage.getItem("storageName") + " -> CO + [Br-]";
 let aiResponseString = localStorage.getItem("aiResponse");
 //let sessionaiResponseString = sessionStorage.getItem("sessionaiResponse") 
-//const urlParams = new URLSearchParams(window.location.search);
-//const name = urlParams.get('name');
-//aiResponseString = aiResponseString.substring(13);
-//aiResponseString = aiResponseString.substring(0, aiResponseString.indexOf("```"));
-console.log("airesponse: "+ aiResponseString);
-//console.log("sessionairesponse: "+ name);
+//console.log("airesponse: "+ aiResponseString);
+
 
 executeReactionScript(aiResponseString);
 //displayReaction(testString, 1);
-//generateText(testString);
 
 
 function executeReactionScript(script) {
