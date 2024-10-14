@@ -56,7 +56,7 @@ app.get('/ReactionMechanism', (req, res) => {
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Replace 'YOUR_API_KEY' with your actual Google Cloud API key
-const genAI = new GoogleGenerativeAI("AIzaSyDmL5Jlm2BcINE_1C-c_8_BcX7UP_H2qsc");
+const genAI = new GoogleGenerativeAI(process.env.API_KEY); // Accesses the API key from the 'API_KEY' environment variable
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Choose a suitable model
 
 const generationConfig = {
