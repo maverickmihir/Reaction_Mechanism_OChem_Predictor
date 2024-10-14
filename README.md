@@ -18,10 +18,10 @@ Installation:
 
 # Clone repository:
 1. Clone this repository or download the project files.
-git clone https://github.com/mihir_rane/predictortool
+git clone https://github.com/maverickmihir/Reaction_Mechanism_OChem_Predictor
 
 2.  Navigate to the project directory in your terminal.
-cd mihir_rane/predictortool
+cd mihir_rane/Reaction_Mechanism_OChem_Predictor
 [TBD: Additional Steps]
 
 # Usage:
@@ -30,7 +30,7 @@ node server.js
 2. Provide input: The application will prompt you to enter the molecular structure of the reactant. You can use ChemDoodle's input mechanisms or provide the structure in a supported format (e.g., SMILES, CML).
 [TBD: future phase you can input SMILES or CML directly without using sketcher]
 3. Get output: The application will process the input, generate the predicted reaction and mechanism, and display the results
-4. Try out this Predictor Tool check [Mihir Rane Chemiqle](https://chemmr.wl.r.appspot.com/)
+4. Try out this Predictor Tool check [Mihir Rane Chemiqle](https://sites.google.com/view/chemiqle/predictor-tool)
 
 # Training data:
 1. reaction_training_data.json will provide pretrained data for analyzing the reactants and explaining the mechanism in a format that can be used by visualization libraries
